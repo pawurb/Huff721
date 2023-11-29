@@ -1,0 +1,412 @@
+/* Interface */
+#define function name() nonpayable returns (string memory)
+#define function symbol() nonpayable returns (string memory)
+#define function supportsInterface(bytes4) nonpayable returns (bool)
+#define function balanceOf(address) nonpayable returns (uint256)
+#define function ownerOf(uint256) nonpayable returns (address)
+#define function mint() nonpayable returns ()
+#define function nextId() nonpayable returns (uint256)
+#define function totalSupply() nonpayable returns (uint256)
+#define function transferFrom(address,address,uint256) nonpayable returns ()
+#define function safeTransferFrom(address,address,uint256) nonpayable returns ()
+#define function safeTransferFrom(address,address,uint256,bytes) nonpayable returns ()
+// "safeTransferFrom(address,address,uint256,bytes)"
+#define constant SAFE_TRANSFER_FROM_BYTES_SIG = 0xb88d4fde
+#define function approve(address,uint256) nonpayable returns()
+#define function getApproved(uint256) nonpayable returns(address)
+#define function setApprovalForAll(address,bool) nonpayable returns()
+#define function isApprovedForAll(address,address) nonpayable returns (bool)
+
+/* Storage Slots */
+#define constant BALANCES_SLOT = FREE_STORAGE_POINTER()
+#define constant OWNERS_SLOT = FREE_STORAGE_POINTER()
+#define constant NEXT_ID_SLOT = FREE_STORAGE_POINTER()
+#define constant MINT_COUNT_SLOT = FREE_STORAGE_POINTER()
+#define constant TOKEN_APPROVALS_SLOT = FREE_STORAGE_POINTER()
+#define constant OPERATOR_APPROVALS_SLOT = FREE_STORAGE_POINTER()
+#define constant MAX_SUPPLY = 0x400
+#define constant MINT_LIMIT = 0x2
+
+/* Routing */
+#define macro MAIN() = takes (0) returns (0) {
+    0x00 calldataload 0xE0 shr
+    dup1 __FUNC_SIG(name) eq name jumpi
+    dup1 __FUNC_SIG(symbol) eq symbol jumpi
+    dup1 __FUNC_SIG(supportsInterface) eq supportsInterface jumpi
+    dup1 __FUNC_SIG(balanceOf) eq balanceOf jumpi
+    dup1 __FUNC_SIG(ownerOf) eq ownerOf jumpi
+    dup1 __FUNC_SIG(mint) eq mint jumpi
+    dup1 __FUNC_SIG(nextId) eq nextId jumpi
+    dup1 __FUNC_SIG(totalSupply) eq totalSupply jumpi
+    dup1 __FUNC_SIG(transferFrom) eq transferFrom jumpi
+    dup1 __FUNC_SIG(safeTransferFrom) eq safeTransferFrom jumpi
+    dup1 [SAFE_TRANSFER_FROM_BYTES_SIG] eq safeTransferFromBytes jumpi
+    dup1 __FUNC_SIG(approve) eq approve jumpi
+    dup1 __FUNC_SIG(getApproved) eq getApproved jumpi
+    dup1 __FUNC_SIG(setApprovalForAll) eq setApprovalForAll jumpi
+    dup1 __FUNC_SIG(isApprovedForAll) eq isApprovedForAll jumpi
+
+    0x194 POP_RETURN()
+
+    name:
+        NAME()
+    symbol:
+        SYMBOL()
+    supportsInterface:
+        SUPPORTS_INTERFACE()
+    balanceOf:
+        BALANCE_OF()
+    ownerOf:
+        OWNER_OF()
+    mint:
+        MINT()
+    nextId:
+        NEXT_ID()
+    totalSupply:
+        TOTAL_SUPPLY()
+    transferFrom:
+        TRANSFER_FROM()
+    safeTransferFrom:
+        SAFE_TRANSFER_FROM()
+    safeTransferFromBytes:
+        SAFE_TRANSFER_FROM_BYTES()
+    approve:
+        APPROVE()
+    getApproved:
+        GET_APPROVED()
+    setApprovalForAll:
+        SET_APPROVAL_FOR_ALL()
+    isApprovedForAll:
+        IS_APPROVED_FOR_ALL()
+}
+
+/* Methods */
+#define macro NAME() = takes (0) returns (0) {
+  0x20 0x0 mstore
+  0x8 0x20 mstore
+  0x4875666620373231000000000000000000000000000000000000000000000000 0x40 mstore
+  0x60 0x0 return
+}
+
+#define macro SYMBOL() = takes (0) returns (0) {
+  0x20 0x0 mstore
+  0x4 0x20 mstore
+  0x4855464600000000000000000000000000000000000000000000000000000000 0x40 mstore
+  0x60 0x0 return
+}
+
+#define macro SUPPORTS_INTERFACE() = takes (0) returns (0) {
+  0x04 calldataload 0xE0 shr
+  dup1
+  0x80ac58cd
+  eq returnTrue jumpi
+
+  0x01ffc9a7
+  eq returnTrue jumpi
+
+  0x0 POP_RETURN()
+
+  returnTrue:
+    0x01 POP_RETURN()
+}
+
+#define macro BALANCE_OF() = takes (0) returns (0) {
+    [BALANCES_SLOT]
+    0x04 calldataload
+    dup1 // [address, address, balancesSlot]
+    0x0 eq zeroAddressBalanceErr jumpi
+    STORAGE_HASH()
+    sload POP_RETURN()
+
+    zeroAddressBalanceErr:
+      // `bytes4(keccak256("ERC721InvalidAddress(address)"))`
+      0x46cce84100000000000000000000000000000000000000000000000000000000 0x0 mstore
+      0x0 0x04 mstore
+      0x24 0x0 revert
+}
+
+#define macro OWNER_OF() = takes (0) returns (0) {
+  [OWNERS_SLOT]
+  0x04 calldataload
+  STORAGE_HASH()
+  sload POP_RETURN()
+}
+
+#define macro MINT() = takes (0) returns (0) {
+    [NEXT_ID_SLOT] sload // [nextId]
+
+    // check maxSupply
+    dup1 // [nextId, nextId]
+    [MAX_SUPPLY] // [maxSupply, nextId, nextId]
+    eq maxSupplyReached jumpi // [nextId]
+
+    // check mintLimit
+    caller [MINT_COUNT_SLOT] STORAGE_HASH() // [mintCountHash, nextId]
+    dup1 // [mintCountHash, mintCountHash, nextId]
+    sload // [currentMintCount, mintCountHash, nextId]
+    dup1 // [currentMintCount, currentMintCount, mintCountHash, nextId]
+
+    [MINT_LIMIT] eq mintLimitReached jumpi // [currentMintCount, mintCountHash, nextId]
+    0x1 add swap1 // [mintCountHash, newMintCount, nextId]
+    sstore // [nextId]
+
+    // updateOwners
+    dup1 // [nextId, nextId]
+    [OWNERS_SLOT] // [ownerSlot, nextId, nextId]
+    swap1 // [nextId, ownerSlot, nextId]
+    STORAGE_HASH() // [ownersHash, nextId]
+    caller // [caller, ownersHash, nextId]
+    swap1
+    sstore // [nextId]
+    dup1 // [nextId, nextId]
+
+    // increment balance
+    [BALANCES_SLOT] caller STORAGE_HASH()
+    dup1 // [balancesHash, balancesHash]
+    sload // [currentBalance, balancesHash]
+    0x1 add // [newBalance, balancesHash]
+    swap1 // [balancesHash, newBalance]
+    sstore // []
+
+    // increment nextId
+    0x1 add // [newNextId, nextId]
+    [NEXT_ID_SLOT] // [nextIdSlot, newNextId, nextId]
+    sstore // [nextId]
+
+    // emit transfer
+    caller 0x0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef 0x0 0x0 log4
+    stop
+
+    maxSupplyReached:
+      // `bytes4(keccak256("ERC721MaxSupplyLimit()"))`
+      0x96c2a07600000000000000000000000000000000000000000000000000000000 0x0 mstore
+      0x04 0x0 revert
+
+    mintLimitReached:
+      // `bytes4(keccak256("ERC721MintLimit()"))`
+      0x3ca6616800000000000000000000000000000000000000000000000000000000 0x0 mstore
+      0x04 0x0 revert
+}
+
+#define macro TRANSFER_FROM() = takes (0) returns (0) {
+  0x04 calldataload // [from]
+  0x24 calldataload // [to, from]
+  dup1 // [to, to, from]
+
+  // check non-zero target address
+  0x0 eq zeroAddressToErr jumpi // [to, from]
+  0x44 calldataload // [tokenId, to, from]
+
+  // check owner
+  [OWNERS_SLOT] // [ownerSlot, tokenId, to, from]
+  swap1 // [tokenId, ownerSlot, to, from]
+  STORAGE_HASH() // [ownersHash, to, from]
+  dup1 // [ownersHash, ownersHash, to, from]
+  sload // [currentOwner, ownersHash, to, from]
+  caller eq accessAllowed jumpi // [ownersHash, to, from]
+
+  // check token approvals
+  [TOKEN_APPROVALS_SLOT] 0x44 calldataload STORAGE_HASH() // [tokenApprovalsHash, ownersHash, to, from]
+  sload // [userApprovedForToken, ownersHash, to, from]
+  caller eq accessAllowed jumpi // [ownersHash, to, from]
+
+  // check operator approvals
+  dup1 sload // [owner, ownerHash]
+  [OPERATOR_APPROVALS_SLOT] swap1 STORAGE_HASH() // [operatorApprovalInnerHash]
+  caller STORAGE_HASH() // [operatorAprrovalHash]
+  sload 0x1 eq accessAllowed jumpi
+  // mstore(0x0, owner)
+  // mstore(0x20, operatorApprovalsSlot())
+  // let operatorApprovalInnerHash := keccak256(0x0, 0x40)
+  // mstore(0x0, caller())
+  // mstore(0x20, operatorApprovalInnerHash)
+
+  // if iszero(sload(keccak256(0x0, 0x40))) {
+
+  accessDenied jump
+
+  accessAllowed:
+
+  // update owner
+  dup2 // [to, ownersHash, to, from]
+  swap1 // [ownersHash, to, to, from]
+  sstore // [to, from]
+  dup1 // [to, to, from]
+
+  // inc balance
+  [BALANCES_SLOT] // [balancesSlot, to, to, from]
+  swap1 // [to, balancesSlot, to, from]
+  STORAGE_HASH() // [balanceHash, to, from]
+  dup1 // [balanceHash, balanceHash, to, from]
+  sload // [currentBalance, balanceHash, to, from]
+  0x1 add // [newBalance, balanceHash, to, from]
+  swap1 // [balanceHash, newBalance, to, from]
+  sstore // [to, from]
+  swap1 // [from, to]
+
+  // dec balance
+  dup1 // [from, from, to]
+  [BALANCES_SLOT] // [balancesSlot, from, from, to]
+  swap1 // [from, balancesSlot, from, to]
+  STORAGE_HASH() // [balanceHash, from, to]
+  dup1 // [balanceHash, balanceHash, from, to]
+  sload // [currentBalance, balanceHash, from, to]
+  0x1 swap1 sub // [newBalance, balanceHash, from, to]
+  swap1 // [balanceHash, newBalance, from, to]
+  sstore // [from, to]
+  swap1 // [to, from]
+  0x44 calldataload // [tokenId, to, from]
+  swap2 // [from, to, tokenId]
+
+  // emit transfer
+  0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef 0x0 0x0 log4
+  stop
+
+  accessDenied:
+  // `bytes4(keccak256("ERC721AccessDenied()"))`
+  0x43df7c0200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  0x04 0x0 revert
+  zeroAddressToErr:
+  // `bytes4(keccak256("ERC721InvalidAddress(address)"))`
+  0x64a0ae9200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  0x0 0x04 mstore
+  0x24 0x0 revert
+}
+
+#define macro SAFE_TRANSFER_FROM() = takes (0) returns (0) {
+  // check onERC721Received
+  0x24 calldataload // [to]
+  extcodesize 0x0 eq transferIsSafe jumpi // []
+  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
+  0x150b7a0200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  0x04 calldataload 0x04 mstore
+  caller 0x24 mstore
+  0x24 calldataload 0x44 mstore
+  0x80 0x64 mstore
+  0x20 0x00 0xa4 0x0 0x0 0x24 calldataload gas call // [success]
+  0x0 eq invalidReceiver jumpi
+  0x0 mload // [result]
+  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
+  0x150b7a0200000000000000000000000000000000000000000000000000000000 eq iszero invalidReceiver jumpi
+
+  transferIsSafe:
+  TRANSFER_FROM()
+
+  invalidReceiver:
+  // `bytes4(keccak256("ERC721InvalidReceiver(address)"))`
+  0x64a0ae9200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  0x24 calldataload 0x04 mstore
+  0x24 0x0 revert
+}
+
+#define macro SAFE_TRANSFER_FROM_BYTES() = takes (0) returns (0) {
+  // check onERC721Received
+  0x24 calldataload // [to]
+  extcodesize 0x0 eq transferIsSafe jumpi // []
+  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
+  0x150b7a0200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  0x04 calldataload 0x04 mstore
+  caller 0x24 mstore
+  0x24 calldataload 0x44 mstore
+  0x20 0x70 0x70 calldatacopy
+  0x20 0x00 0xa4 0x0 0x0 0x24 calldataload gas call // [success]
+  0x0 eq invalidReceiver jumpi
+  0x0 mload // [result]
+  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
+  0x150b7a0200000000000000000000000000000000000000000000000000000000 eq iszero invalidReceiver jumpi
+
+  transferIsSafe:
+  TRANSFER_FROM()
+
+  invalidReceiver:
+  // `bytes4(keccak256("ERC721InvalidReceiver(address)"))`
+  0x64a0ae9200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  0x24 calldataload 0x04 mstore
+  0x24 0x0 revert
+}
+
+#define macro APPROVE() = takes (0) returns (0) {
+  // check owner
+  0x24 calldataload dup1 // [tokenId, tokenId]
+  [OWNERS_SLOT] // [ownersSlot, tokenId, tokenId]
+  swap1 // [tokenId, ownersSlot, tokenId]
+  STORAGE_HASH() // [ownersHash, tokenId]
+  sload // [currentOwner, tokenId]
+  caller eq iszero accessDenied jumpi
+
+  // update approvals
+  [TOKEN_APPROVALS_SLOT] // [tokenApprovalsSlot, tokenId]
+  dup2 // [tokenId, tokenApprovalsSlot, tokenId]
+  STORAGE_HASH() // [tokenApprovalsHash, tokenId]
+  0x04 calldataload // [target, tokenApprovalsHash, tokenId]
+  swap1 // [tokenApprovalsHash, target, tokenId]
+  sstore // [tokenId]
+
+  0x04 calldataload // [target, tokenId]
+  caller // [caller, target, tokenId]
+
+  // `keccak256("Approval(address,address,uint256)")`
+  0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925
+  0x0 0x0 log4
+  stop
+}
+
+#define macro GET_APPROVED() = takes (0) returns (0) {
+  [OWNERS_SLOT] 0x04 calldataload STORAGE_HASH() // [ownwerHash]
+  sload // [currentOwner]
+  0x0 eq nonExistentToken jumpi
+
+  [TOKEN_APPROVALS_SLOT] 0x04 calldataload STORAGE_HASH() // [tokenApprovalsHash]
+  sload 0x0 mstore
+  0x20 0x0 return
+
+  nonExistentToken:
+  // `bytes4(keccak256("ERC721NonexistentToken(uint256)"))
+  0x7e27328900000000000000000000000000000000000000000000000000000000 0x0 mstore
+  0x04 calldataload 0x04 mstore
+  0x24 0x0 revert
+}
+
+#define macro SET_APPROVAL_FOR_ALL() = takes (0) returns (0) {
+  [OPERATOR_APPROVALS_SLOT] caller STORAGE_HASH() // [operatorApprovalInnerHash]
+  0x04 calldataload STORAGE_HASH() // [operatorApprovalHash]
+  0x24 calldataload swap1 // [operatorApprovalHash, approvalBool]
+  sstore
+
+  // emit event
+  0x24 calldataload 0x0 mstore
+  0x04 calldataload caller
+  // `keccak256("ApprovalForAll(address,address,bool)")`
+  0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31 0x20 0x0 log3
+  stop
+}
+
+#define macro IS_APPROVED_FOR_ALL() = takes (0) returns (0) {
+  [OPERATOR_APPROVALS_SLOT] 0x04 calldataload STORAGE_HASH() // [operatorApprovalInnerHash]
+  0x24 calldataload STORAGE_HASH()
+  sload
+  POP_RETURN()
+}
+
+#define macro NEXT_ID() = takes (0) returns (0) {
+  [NEXT_ID_SLOT] sload POP_RETURN()
+}
+
+#define macro TOTAL_SUPPLY() = takes (0) returns (0) {
+  NEXT_ID()
+}
+
+/* Helpers */
+
+#define macro STORAGE_HASH() = takes (2) returns (1) {
+  // [argument, storageSlot]
+  0x00 mstore // [storageSlot]
+  0x20 mstore
+  0x40 0x00 sha3 // [storageHash]
+}
+
+#define macro POP_RETURN() = takes (1) returns (0) {
+  0x00 mstore
+  0x20 0x00 return
+}
+
