@@ -24,10 +24,6 @@ jobs:
         with:
           version: nightly
 
-      - name: Install node_modules
-        run: |
-          npm i
-
       - name: Run Forge build
         run: |
           forge --version
