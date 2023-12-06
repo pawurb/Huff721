@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "foundry-huff/HuffDeployer.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
+import "../src/lib/BytecodeDeployer.sol";
 import {MockNFTNonHolder} from "../src/test/MockNFTNonHolder.sol";
 import {MockNFTHolder} from "../src/test/MockNFTHolder.sol";
 import {MockNFTBuggyHolder} from "../src/test/MockNFTBuggyHolder.sol";
@@ -40,6 +41,7 @@ interface Huff721 {
 
 contract BaseTest is Test {
     Huff721 public huff;
+    BytecodeDeployer bytecodeDeployer = new BytecodeDeployer();
     address me;
     address nftNonHolder;
     address nftHolder;
@@ -50,7 +52,7 @@ contract BaseTest is Test {
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 
     function setUp() public virtual {
-        huff = Huff721(HuffDeployer.deploy("Huff721"));
+        huff = Huff721(bytecodeDeployer.deployContract("Huff721"));
         me = address(this);
         nftNonHolder = address(new MockNFTNonHolder());
         nftHolder = address(new MockNFTHolder());
