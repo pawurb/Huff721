@@ -30,12 +30,12 @@
 /* Routing */
 #define macro MAIN() = takes (0) returns (0) {
     0x00 calldataload 0xE0 shr
+    dup1 __FUNC_SIG(mint) eq mint jumpi
     dup1 __FUNC_SIG(name) eq name jumpi
     dup1 __FUNC_SIG(symbol) eq symbol jumpi
     dup1 __FUNC_SIG(supportsInterface) eq supportsInterface jumpi
     dup1 __FUNC_SIG(balanceOf) eq balanceOf jumpi
     dup1 __FUNC_SIG(ownerOf) eq ownerOf jumpi
-    dup1 __FUNC_SIG(mint) eq mint jumpi
     dup1 __FUNC_SIG(nextId) eq nextId jumpi
     dup1 __FUNC_SIG(totalSupply) eq totalSupply jumpi
     dup1 __FUNC_SIG(transferFrom) eq transferFrom jumpi
@@ -48,6 +48,8 @@
 
     0x194 POP_RETURN()
 
+    mint:
+        MINT()
     name:
         NAME()
     symbol:
@@ -58,8 +60,6 @@
         BALANCE_OF()
     ownerOf:
         OWNER_OF()
-    mint:
-        MINT()
     nextId:
         NEXT_ID()
     totalSupply:
