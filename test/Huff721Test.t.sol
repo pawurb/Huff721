@@ -192,7 +192,7 @@ contract TransferFromTest is BaseTest {
 
     // 'transferFrom(address,address,uint256)' token to the zero address
     function test_transferFromToZero() public {
-        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidReceiver.selector, zeroAddress));
+        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidAddress.selector, zeroAddress));
         huff.transferFrom(me, zeroAddress, TOKEN_ID);
     }
 }
@@ -258,7 +258,7 @@ contract SafeTransferFromTest is BaseTest {
 
     // 'safeTransferFrom(address,address,uint256)' token to the zero address
     function test_transferFromToZero() public {
-        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidReceiver.selector, zeroAddress));
+        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidAddress.selector, zeroAddress));
         huff.safeTransferFrom(me, zeroAddress, TOKEN_ID);
     }
 }
@@ -323,7 +323,7 @@ contract SafeTransferFromBytesTest is BaseTest {
 
     // 'safeTransferFrom(address,address,uint256,bytes)' token to the zero address
     function test_transferFromToZero() public {
-        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidReceiver.selector, zeroAddress));
+        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidAddress.selector, zeroAddress));
         huff.safeTransferFrom(me, zeroAddress, TOKEN_ID, "");
     }
 }
@@ -492,7 +492,7 @@ contract EdgeCasesTest is BaseTest {
 
     // 'transferFrom(address,address,uint256)' token to the zero address
     function test_transferFromToZero() public {
-        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidReceiver.selector, zeroAddress));
+        vm.expectRevert(abi.encodeWithSelector(Huff721.ERC721InvalidAddress.selector, zeroAddress));
         huff.safeTransferFrom(me, zeroAddress, TOKEN_ID);
     }
 }

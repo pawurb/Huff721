@@ -17,6 +17,20 @@
 #define function setApprovalForAll(address,bool) nonpayable returns()
 #define function isApprovedForAll(address,address) nonpayable returns (bool)
 
+// bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
+#define constant ON_ERC721_RECEIVED_SIG = 0x150b7a0200000000000000000000000000000000000000000000000000000000
+
+#define error ERC721NonexistentToken(uint256)
+#define error ERC721InvalidReceiver(address)
+#define error ERC721AccessDenied()
+#define error ERC721InvalidAddress(address)
+#define error ERC721MintLimit()
+#define error ERC721MaxSupplyLimit()
+
+#define event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+#define event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
+#define event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
+
 /* Storage Slots */
 #define constant BALANCES_SLOT = FREE_STORAGE_POINTER()
 #define constant OWNERS_SLOT = FREE_STORAGE_POINTER()
@@ -119,8 +133,7 @@
     sload POP_RETURN()
 
     zeroAddressBalanceErr:
-      // `bytes4(keccak256("ERC721InvalidAddress(address)"))`
-      0x46cce84100000000000000000000000000000000000000000000000000000000 0x0 mstore
+      __ERROR(ERC721InvalidAddress) 0x0 mstore
       0x0 0x04 mstore
       0x24 0x0 revert
 }
@@ -173,18 +186,15 @@
     [NEXT_ID_SLOT] // [nextIdSlot, newNextId, nextId]
     sstore // [nextId]
 
-    // emit transfer
-    caller 0x0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef 0x0 0x0 log4
+    caller 0x0 __EVENT_HASH(Transfer) 0x0 0x0 log4
     stop
 
     maxSupplyReached:
-      // `bytes4(keccak256("ERC721MaxSupplyLimit()"))`
-      0x96c2a07600000000000000000000000000000000000000000000000000000000 0x0 mstore
+      __ERROR(ERC721MaxSupplyLimit) 0x0 mstore
       0x04 0x0 revert
 
     mintLimitReached:
-      // `bytes4(keccak256("ERC721MintLimit()"))`
-      0x3ca6616800000000000000000000000000000000000000000000000000000000 0x0 mstore
+      __ERROR(ERC721MintLimit) 0x0 mstore
       0x04 0x0 revert
 }
 
@@ -215,13 +225,6 @@
   [OPERATOR_APPROVALS_SLOT] swap1 STORAGE_HASH() // [operatorApprovalInnerHash]
   caller STORAGE_HASH() // [operatorAprrovalHash]
   sload 0x1 eq accessAllowed jumpi
-  // mstore(0x0, owner)
-  // mstore(0x20, operatorApprovalsSlot())
-  // let operatorApprovalInnerHash := keccak256(0x0, 0x40)
-  // mstore(0x0, caller())
-  // mstore(0x20, operatorApprovalInnerHash)
-
-  // if iszero(sload(keccak256(0x0, 0x40))) {
 
   accessDenied jump
 
@@ -258,17 +261,14 @@
   0x44 calldataload // [tokenId, to, from]
   swap2 // [from, to, tokenId]
 
-  // emit transfer
-  0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef 0x0 0x0 log4
+  __EVENT_HASH(Transfer) 0x0 0x0 log4
   stop
 
   accessDenied:
-  // `bytes4(keccak256("ERC721AccessDenied()"))`
-  0x43df7c0200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  __ERROR(ERC721AccessDenied) 0x0 mstore
   0x04 0x0 revert
   zeroAddressToErr:
-  // `bytes4(keccak256("ERC721InvalidAddress(address)"))`
-  0x64a0ae9200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  __ERROR(ERC721InvalidAddress) 0x0 mstore
   0x0 0x04 mstore
   0x24 0x0 revert
 }
@@ -277,8 +277,7 @@
   // check onERC721Received
   0x24 calldataload // [to]
   extcodesize 0x0 eq transferIsSafe jumpi // []
-  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
-  0x150b7a0200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  [ON_ERC721_RECEIVED_SIG] 0x0 mstore
   0x04 calldataload 0x04 mstore
   caller 0x24 mstore
   0x24 calldataload 0x44 mstore
@@ -286,15 +285,13 @@
   0x20 0x00 0xa4 0x0 0x0 0x24 calldataload gas call // [success]
   0x0 eq invalidReceiver jumpi
   0x0 mload // [result]
-  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
-  0x150b7a0200000000000000000000000000000000000000000000000000000000 eq iszero invalidReceiver jumpi
+  [ON_ERC721_RECEIVED_SIG] eq iszero invalidReceiver jumpi
 
   transferIsSafe:
   TRANSFER_FROM()
 
   invalidReceiver:
-  // `bytes4(keccak256("ERC721InvalidReceiver(address)"))`
-  0x64a0ae9200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  __ERROR(ERC721InvalidReceiver) 0x0 mstore
   0x24 calldataload 0x04 mstore
   0x24 0x0 revert
 }
@@ -303,8 +300,7 @@
   // check onERC721Received
   0x24 calldataload // [to]
   extcodesize 0x0 eq transferIsSafe jumpi // []
-  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
-  0x150b7a0200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  [ON_ERC721_RECEIVED_SIG] 0x0 mstore
   0x04 calldataload 0x04 mstore
   caller 0x24 mstore
   0x24 calldataload 0x44 mstore
@@ -312,15 +308,13 @@
   0x20 0x00 0xa4 0x0 0x0 0x24 calldataload gas call // [success]
   0x0 eq invalidReceiver jumpi
   0x0 mload // [result]
-  // bytes4(keccak256("onERC721Received(address,address,uint256,bytes"))
-  0x150b7a0200000000000000000000000000000000000000000000000000000000 eq iszero invalidReceiver jumpi
+  [ON_ERC721_RECEIVED_SIG] eq iszero invalidReceiver jumpi
 
   transferIsSafe:
   TRANSFER_FROM()
 
   invalidReceiver:
-  // `bytes4(keccak256("ERC721InvalidReceiver(address)"))`
-  0x64a0ae9200000000000000000000000000000000000000000000000000000000 0x0 mstore
+  __ERROR(ERC721InvalidReceiver) 0x0 mstore
   0x24 calldataload 0x04 mstore
   0x24 0x0 revert
 }
@@ -345,8 +339,7 @@
   0x04 calldataload // [target, tokenId]
   caller // [caller, target, tokenId]
 
-  // `keccak256("Approval(address,address,uint256)")`
-  0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925
+  __EVENT_HASH(Approval)
   0x0 0x0 log4
   stop
 }
@@ -361,8 +354,7 @@
   0x20 0x0 return
 
   nonExistentToken:
-  // `bytes4(keccak256("ERC721NonexistentToken(uint256)"))
-  0x7e27328900000000000000000000000000000000000000000000000000000000 0x0 mstore
+  __ERROR(ERC721NonexistentToken) 0x0 mstore
   0x04 calldataload 0x04 mstore
   0x24 0x0 revert
 }
@@ -373,11 +365,9 @@
   0x24 calldataload swap1 // [operatorApprovalHash, approvalBool]
   sstore
 
-  // emit event
   0x24 calldataload 0x0 mstore
   0x04 calldataload caller
-  // `keccak256("ApprovalForAll(address,address,bool)")`
-  0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31 0x20 0x0 log3
+  __EVENT_HASH(ApprovalForAll) 0x20 0x0 log3
   stop
 }
 
