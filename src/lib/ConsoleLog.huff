@@ -1,0 +1,23 @@
+#define macro CONSOLE_LOG_INT() = takes (1) returns (0) {
+    // "log(int)"
+    0x4e0c1d1d00000000000000000000000000000000000000000000000000000000
+    CONSOLE_LOG_BASE()
+}
+
+#define macro CONSOLE_LOG_ADDRESS() = takes (1) returns (0) {
+    // "log(address)"
+    0x2c2ecbc200000000000000000000000000000000000000000000000000000000
+    CONSOLE_LOG_BASE()
+}
+
+#define macro CONSOLE_LOG_BYTES() = takes (1) returns (0) {
+    // "log(bytes)"
+    0x0be77f5600000000000000000000000000000000000000000000000000000000
+    CONSOLE_LOG_BASE()
+}
+
+#define macro CONSOLE_LOG_BASE() = takes (2) returns (0) {
+  0x0 mstore
+  0x04 mstore
+  0x0 0x0 0x24 0x0 0x000000000000000000636F6e736F6c652e6c6f67 gas staticcall
+}

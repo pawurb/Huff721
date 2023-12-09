@@ -1,3 +1,5 @@
+// #include "./lib/ConsoleLog.huff"
+
 /* Interface */
 #define function name() nonpayable returns (string memory)
 #define function symbol() nonpayable returns (string memory)
