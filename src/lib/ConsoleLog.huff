@@ -10,15 +10,9 @@
     CONSOLE_LOG_BASE()
 }
 
-#define macro CONSOLE_LOG_BYTES() = takes (1) returns (0) {
-    // "log(bytes)"
-    0x0be77f5600000000000000000000000000000000000000000000000000000000
-    CONSOLE_LOG_BASE()
-}
-
 #define macro CONSOLE_LOG_BASE() = takes (2) returns (0) {
-  0x0 mstore
-  0x04 mstore
-  0x0 0x0 0x24 0x0 0x000000000000000000636F6e736F6c652e6c6f67 gas staticcall
+  0x400 mstore
+  0x404 mstore
+  0x0 0x0 0x24 0x400 0x000000000000000000636F6e736F6c652e6c6f67 gas staticcall
   pop
 }
